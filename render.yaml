@@ -1,0 +1,19 @@
+services:
+  - type: mysql
+    name: gps-db
+    ipAllowList: []  # Add your IP or leave empty for Render's default
+    initSql: init.sql
+
+  - type: web
+    name: gps-backend
+    env: docker
+    dockerfilePath: ./php server/Dockerfile
+    healthCheckPath: /api.php
+
+  - type: static_site
+    name: gps-frontend
+    buildCommand: npm run build
+    publishDir: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://gps-backend.onrender.com/api.php  # Update with actual URL

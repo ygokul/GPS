@@ -11,10 +11,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Database config
-$db_host = 'localhost';
-$db_name = 'u187878636_gps';
-$db_user = 'u187878636_gps';
-$db_pass = 'Abdulkalam@01';
+$db_host = getenv('MYSQL_HOST') ?: 'localhost';
+$db_name = getenv('MYSQL_DATABASE') ?: 'u187878636_gps';
+$db_user = getenv('MYSQL_USER') ?: 'u187878636_gps';
+$db_pass = getenv('MYSQL_PASSWORD') ?: 'Abdulkalam@01';
 
 $conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
 if ($conn->connect_error) {
