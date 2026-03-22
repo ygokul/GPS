@@ -9,6 +9,9 @@ services:
     env: docker
     dockerfilePath: ./php server/Dockerfile
     healthCheckPath: /api.php
+    envVars:
+      - key: PORT
+        value: "10000"
 
   - type: static_site
     name: gps-frontend
