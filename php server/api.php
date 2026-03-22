@@ -152,29 +152,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $gps_data = load_json('gps_data.json');
         $devices = load_json('devices.json');
         
-        // Create device map
+        // Create device map: device_id string => id
         $device_map = [];
         foreach ($devices as $device) {
-            $device_map[$device['id']] = $device['device_id'];
+            $device_map[$device['device_id']] = $device['id'];
         }
         
         // Get latest for each device
         $latest = [];
         foreach ($gps_data as $point) {
-            $dev_id = $point['device_id'];
+            $dev_id = $point['device_id'];  // This is now the device_id string like "test_gps_engine"
             if (!isset($latest[$dev_id]) || strtotime($point['recorded_at']) > strtotime($latest[$dev_id]['recorded_at'])) {
                 $latest[$dev_id] = $point;
             }
         }
         
         $data = [];
-        foreach ($latest as $point) {
+        foreach ($latest as $dev_id => $point) {
             $data[] = [
                 'lat' => floatval($point['latitude']),
                 'lng' => floatval($point['longitude']),
                 'timestamp' => $point['recorded_at'],
                 'satellites' => intval($point['satellites']),
-                'deviceId' => $point['device_id']
+                'deviceId' => $dev_id  // Use device_id string for matching
             ];
         }
         echo json_encode(['data' => $data]);
@@ -197,11 +197,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             });
         }
         
-        // Filter by device if provided
+        // Filter by device if provided - match against device_id string
         if (isset($_GET['device_id']) && !empty($_GET['device_id'])) {
             $search_device = $_GET['device_id'];
             $filtered = array_filter($filtered, function($point) use ($search_device) {
-                return $point['device_id'] == $search_device;
+                return $point['device_id'] === $search_device;
             });
         }
         

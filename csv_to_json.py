@@ -51,9 +51,10 @@ def parse_csv_to_json():
         
         elif gps_section and len(values) >= 7:
             try:
+                # Use device_id string as the identifier, not numeric id
                 gps_data.append({
                     "id": int(values[0]),
-                    "device_id": values[1],
+                    "device_id": "test_gps_engine",  # Use device API key
                     "user_id": int(values[2]),
                     "latitude": float(values[3]),
                     "longitude": float(values[4]),
