@@ -127,10 +127,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         
         $data = [];
         foreach ($devices as $device) {
-            // Find last connection
+            // Find last connection using device_id string
             $last_connect = date('Y-m-d H:i:s');
             foreach (array_reverse($gps_data) as $point) {
-                if ($point['device_id'] == $device['id']) {
+                if ($point['device_id'] === $device['device_id']) {
                     $last_connect = $point['recorded_at'];
                     break;
                 }
@@ -144,6 +144,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             ];
         }
         echo json_encode(['data' => $data]);
+        exit();
+    }
+
+    // 1b. GET USER
+    if ($action === 'user') {
+        echo json_encode(['data' => [
+            'id' => '1',
+            'name' => 'GPS User',
+            'email' => 'user@example.com',
+            'role' => 'admin'
+        ]]);
         exit();
     }
 
@@ -230,46 +241,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     // 4. GET STATS
     if ($action === 'stats') {
-        $devices = load_json('devices.json');
-        $gps_data = load_json('gps_data.json');
-        
-        $total_devices = count($devices);
-        $total_points = count($gps_data);
-        
-        // Count today's points
-        $today = date('Y-m-d');
-        $today_points = 0;
-        foreach ($gps_data as $point) {
-            if (strpos($point['recorded_at'], $today) === 0) {
-                $today_points++;
-            }
-        }
-        
-        // Count online devices (updated in last 10 minutes)
-        $ten_min_ago = strtotime('-10 minutes');
-        $online_devices = 0;
-        $checked_devices = [];
-        foreach (array_reverse($gps_data) as $point) {
-            $dev_id = $point['device_id'];
-            if (!in_array($dev_id, $checked_devices)) {
-                if (strtotime($point['recorded_at']) > $ten_min_ago) {
-                    $online_devices++;
+        try {
+            $devices = load_json('devices.json');
+            $gps_data = load_json('gps_data.json');
+            
+            $total_devices = count($devices);
+            $total_points = count($gps_data);
+            
+            // Get period (day, week, month)
+            $period = isset($_GET['period']) ? $_GET['period'] : 'day';
+            
+            // Count today's points (or based on period)
+            $today = date('Y-m-d');
+            $today_points = 0;
+            
+            if ($period === 'day') {
+                foreach ($gps_data as $point) {
+                    if (strpos($point['recorded_at'], $today) === 0) {
+                        $today_points++;
+                    }
                 }
-                $checked_devices[] = $dev_id;
+            } else if ($period === 'week') {
+                $week_ago = date('Y-m-d', strtotime('-7 days'));
+                foreach ($gps_data as $point) {
+                    if ($point['recorded_at'] >= $week_ago) {
+                        $today_points++;
+                    }
+                }
+            } else if ($period === 'month') {
+                $month_ago = date('Y-m-d', strtotime('-30 days'));
+                foreach ($gps_data as $point) {
+                    if ($point['recorded_at'] >= $month_ago) {
+                        $today_points++;
+                    }
+                }
             }
+            
+            // Count online devices (updated in last 10 minutes)
+            $ten_min_ago = strtotime('-10 minutes');
+            $online_devices = 0;
+            $checked_devices = [];
+            
+            if (!empty($gps_data)) {
+                foreach (array_reverse($gps_data) as $point) {
+                    $dev_id = $point['device_id'];
+                    if (!in_array($dev_id, $checked_devices)) {
+                        if (strtotime($point['recorded_at']) > $ten_min_ago) {
+                            $online_devices++;
+                        }
+                        $checked_devices[] = $dev_id;
+                    }
+                }
+            }
+            
+            echo json_encode(['data' => [
+                'totalDevices' => $total_devices,
+                'onlineDevices' => $online_devices,
+                'todayPoints' => $today_points,
+                'totalPoints' => $total_points
+            ]]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
         }
-        
-        echo json_encode(['data' => [
-            'totalDevices' => $total_devices,
-            'onlineDevices' => $online_devices,
-            'todayPoints' => $today_points,
-            'totalPoints' => $total_points
-        ]]);
         exit();
     }
 }
 
-// Default response
-http_response_code(404);
-echo json_encode(['error' => 'Not Found']);
+// Default response for unknown actions
+http_response_code(400);
+$action = isset($_GET['action']) ? $_GET['action'] : 'none';
+echo json_encode([
+    'error' => 'Unknown action: ' . $action,
+    'available' => ['devices', 'user', 'live', 'history', 'stats'],
+    'method' => $_SERVER['REQUEST_METHOD']
+]);
 ?>
