@@ -21,6 +21,10 @@ services:
     healthCheckPath: /
     envVars:
       - key: PORT
+        value: "10000"mand: npm run preview -- --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: PORT
         value: "10000"
       - key: VITE_API_URL
         value: https://gps-backend.onrender.com/api.php  # Update with actual URL
